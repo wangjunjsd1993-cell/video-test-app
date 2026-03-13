@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!--
+  视频生成测试应用 — 百度VOD VQ3P (Vidu Q3 Pro)
+  AK/SK已内置，打开即用，无需配置
+  
+  支持模型：VQ3P(默认) / K26 / VE3.1 / VE3.1F / H23 等
+  Host: vod.bj.baidubce.com
+  签名：BCE HMAC-SHA256
+-->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>视频生成测试应用 — 百度VOD</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg1:#0f0f13;--bg2:#1a1a24;--bg3:#242436;--bg4:#2a2a3e;--t1:#e8e8f0;--t2:#9898b0;--t3:#606078;--ac:#6c5ce7;--ac2:#7f70f0;--ok:#2ecc71;--warn:#f39c12;--err:#e74c3c;--bd:#2a2a3e;--r:12px;--rs:8px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg1);color:var(--t1);min-height:100vh}
+.header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--bg2);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100}
+.header h1{font-size:20px;font-weight:600;background:linear-gradient(135deg,#6c5ce7,#a29bfe);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-right{display:flex;gap:12px;align-items:center;font-size:13px;color:var(--t2)}
+.btn{padding:8px 16px;border:none;border-radius:var(--rs);cursor:pointer;font-size:14px;font-weight:500;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--ac);color:#fff}.btn-primary:hover{background:var(--ac2);box-shadow:0 0 20px rgba(108,92,231,.3)}.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-secondary{background:var(--bg3);color:var(--t1);border:1px solid var(--bd)}.btn-secondary:hover{background:var(--bg4)}
+.main{display:flex;height:calc(100vh - 65px)}
+.panel-left{width:50%;min-width:400px;border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow-y:auto}
+.panel-right{width:50%;min-width:400px;display:flex;flex-direction:column;overflow-y:auto}
+.tabs{display:flex;padding:16px 24px 0;gap:4px}
+.tab{padding:10px 20px;background:0;border:none;color:var(--t2);font-size:14px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab.active{color:var(--ac);border-bottom-color:var(--ac)}.tab:hover{color:var(--t1)}
+.form-section{padding:24px}.form-group{margin-bottom:20px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--t2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+textarea,input[type="text"],select{width:100%;padding:12px 16px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--rs);color:var(--t1);font-size:14px;transition:border-color .2s;outline:none}
+textarea:focus,input:focus,select:focus{border-color:var(--ac)}
+textarea{min-height:200px;max-height:400px;resize:vertical;font-family:inherit;line-height:1.6}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239898b0' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+.params-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px}
+.upload-area{border:2px dashed var(--bd);border-radius:var(--r);padding:32px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.upload-area:hover,.upload-area.dragover{border-color:var(--ac);background:rgba(108,92,231,.05)}
+.upload-area .upload-icon{font-size:40px;margin-bottom:12px}.upload-area .upload-text{color:var(--t2);font-size:14px}.upload-area .upload-hint{color:var(--t3);font-size:12px;margin-top:8px}
+.upload-area input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.image-grid{display:grid;grid-template-columns:repeat(3,80px);gap:8px;margin-top:16px}
+.image-grid-item{width:80px;height:80px;border-radius:var(--rs);overflow:hidden;position:relative;cursor:grab;border:2px solid transparent;transition:border-color .2s}
+.image-grid-item:active{cursor:grabbing}.image-grid-item.dragging{opacity:.5;border-color:var(--ac)}.image-grid-item.drag-over{border-color:var(--ac)}
+.image-grid-item img{width:100%;height:100%;object-fit:cover}
+.image-grid-item .remove-btn{position:absolute;top:2px;right:2px;width:20px;height:20px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+.image-grid-item:hover .remove-btn{opacity:1}
+.image-grid-item .img-label{position:absolute;bottom:2px;left:2px;background:rgba(108,92,231,.85);color:#fff;font-size:10px;padding:1px 6px;border-radius:4px}
+.image-grid-add{width:80px;height:80px;border:2px dashed var(--bd);border-radius:var(--rs);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:24px;color:var(--t3);transition:all .2s;position:relative}
+.image-grid-add:hover{border-color:var(--ac);color:var(--ac)}
+.image-grid-add input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.progress-container{margin-top:16px;display:none}.progress-container.active{display:block}
+.progress-bar-bg{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--ac),#a29bfe);border-radius:3px;width:0%;transition:width .3s}
+.progress-text{font-size:12px;color:var(--t2);margin-top:6px;text-align:center}
+.result-header{padding:20px 24px;font-size:16px;font-weight:600;border-bottom:1px solid var(--bd)}
+.result-content{flex:1;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.result-empty{text-align:center;color:var(--t3)}.result-empty .empty-icon{font-size:48px;margin-bottom:12px}
+.video-player-wrapper{width:100%;max-width:640px;background:#000;border-radius:var(--r);overflow:hidden;display:none}
+.video-player-wrapper video{width:100%;display:block}
+.video-actions{padding:12px;display:flex;justify-content:center;gap:12px;background:var(--bg2)}
+.history-section{border-top:1px solid var(--bd);padding:16px 24px}
+.history-section h3{font-size:14px;color:var(--t2);margin-bottom:12px}
+.history-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto}
+.history-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg3);border-radius:var(--rs);cursor:pointer;transition:background .2s}
+.history-item:hover{background:var(--bg4)}
+.history-item .hi-thumb{width:48px;height:36px;background:#000;border-radius:4px;overflow:hidden;flex-shrink:0}
+.history-item .hi-thumb video{width:100%;height:100%;object-fit:cover}
+.history-item .hi-info{flex:1;min-width:0}
+.history-item .hi-title{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-item .hi-time{font-size:11px;color:var(--t3)}
+.history-item .hi-status{font-size:11px;padding:2px 8px;border-radius:10px;flex-shrink:0}
+.hi-status.success{background:rgba(46,204,113,.15);color:var(--ok)}
+.hi-status.pending{background:rgba(243,156,18,.15);color:var(--warn)}
+.hi-status.error{background:rgba(231,76,60,.15);color:var(--err)}
+.skeleton{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:200% 100%;animation:skp 1.5s infinite;border-radius:var(--rs)}
+@keyframes skp{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-video{width:100%;max-width:640px;aspect-ratio:16/9;display:none}.skeleton-video.active{display:block}
+.spinner{width:20px;height:20px;border:2px solid transparent;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);padding:12px 24px;border-radius:var(--rs);font-size:14px;z-index:300;transition:transform .3s;max-width:90vw}
+.toast.show{transform:translateX(-50%) translateY(0)}.toast.success{background:var(--ok);color:#fff}.toast.error{background:var(--err);color:#fff}.toast.info{background:var(--ac);color:#fff}
+@media(max-width:860px){.main{flex-direction:column;height:auto}.panel-left,.panel-right{width:100%;min-width:0;border-right:none}.panel-left{border-bottom:1px solid var(--bd)}.params-row{grid-template-columns:1fr}}
+</style>
+<!-- crypto-js for HMAC-SHA256 signing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+</head>
+<body>
+<header class="header">
+  <h1>🎬 视频生成 — 百度VOD</h1>
+  <div class="header-right">
+    <span style="color:var(--ok)">● 已连接</span>
+    <span>VQ3P (Vidu Q3 Pro)</span>
+  </div>
+</header>
+<div class="main">
+  <div class="panel-left">
+    <div class="tabs">
+      <button class="tab active" data-tab="t2v" onclick="switchTab('t2v')">📝 文生视频</button>
+      <button class="tab" data-tab="i2v" onclick="switchTab('i2v')">🖼️ 图生视频</button>
+    </div>
+    <!-- 文生视频 -->
+    <div id="tab-t2v" class="form-section">
+      <div class="form-group">
+        <label>视频描述</label>
+        <textarea id="t2vPrompt" placeholder="描述你想生成的视频内容...&#10;&#10;例如：一只金色的猫咪在阳光明媚的花园里追逐蝴蝶，电影质感，浅景深" maxlength="2000"></textarea>
+        <div style="text-align:right;margin-top:4px"><span id="t2vCharCount" style="font-size:11px;color:var(--t3)">0/2000</span></div>
+      </div>
+      <div class="params-row">
+        <div class="form-group"><label>模型</label><select id="t2vModel">
+          <option value="VQ3P" selected>VQ3P — Vidu Q3 Pro</option>
+          <option value="K26">K26 — Kling 2.6</option>
+          <option value="VE3.1">VE3.1 — Veo 3.1</option>
+          <option value="VE3.1F">VE3.1F — Veo 3.1 Fast</option>
+          <option value="H23">H23 — Hailuo 2.3</option>
+          <option value="VQ3T">VQ3T — Vidu Q3 Turbo</option>
+          <option value="VQ2">VQ2 — Vidu Q2</option>
+          <option value="K25T">K25T — Kling 2.5 Turbo</option>
+          <option value="P55">P55 — Pika 5.5</option>
+        </select></div>
+        <div class="form-group"><label>视频时长</label><select id="t2vDuration">
+          <option value="4">4 秒</option><option value="5" selected>5 秒</option><option value="8">8 秒</option><option value="10">10 秒</option>
+        </select></div>
+      </div>
+      <div class="params-row">
+        <div class="form-group"><label>分辨率</label><select id="t2vResolution"><option value="720p">720p</option><option value="1080p" selected>1080p</option></select></div>
+        <div class="form-group"><label>风格（可选）</label><input type="text" id="t2vStyle" placeholder="如：cinematic, anime..."></div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0">
+          <input type="checkbox" id="t2vAudio" checked> 生成音频（VQ3P支持）
+        </label>
+      </div>
+      <button class="btn btn-primary" id="t2vSubmit" onclick="submitT2V()" style="width:100%;justify-content:center;padding:12px">🚀 生成视频</button>
+      <div class="progress-container" id="t2vProgress"><div class="progress-bar-bg"><div class="progress-bar" id="t2vProgressBar"></div></div><div class="progress-text" id="t2vProgressText">准备中...</div></div>
+      <div style="margin-top:16px">
+        <div style="background:var(--card);border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+          <div style="padding:8px 12px;background:#1a2a1a;color:#4ade80;font-size:13px;font-weight:600">🟩 运行日志</div>
+          <pre id="t2vLog" style="padding:12px;margin:0;font-size:12px;color:#94a3b8;max-height:200px;overflow-y:auto;white-space:pre-wrap;font-family:monospace">等待操作...</pre>
+        </div>
+      </div>
+    </div>
+    <!-- 图生视频 -->
+    <div id="tab-i2v" class="form-section" style="display:none">
+      <div class="form-group">
+        <label>上传图片</label>
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-text">拖拽图片到此处或点击上传（支持多张，最多10张）</div>
+          <div class="upload-hint">支持 JPG、PNG、WEBP，单张最大 100MB</div>
+          <input type="file" id="imageInput" accept=".jpg,.jpeg,.png,.webp" multiple>
+        </div>
+        <div class="image-grid" id="imageGrid" style="display:none"></div>
+      </div>
+      <div class="form-group"><label>视频描述（可选）</label><textarea id="i2vPrompt" placeholder="描述运动方向或效果..." style="min-height:80px;max-height:200px"></textarea></div>
+      <div class="params-row">
+        <div class="form-group"><label>模型</label><select id="i2vModel">
+          <option value="VQ3P" selected>VQ3P — Vidu Q3 Pro</option>
+          <option value="K26">K26 — Kling 2.6</option>
+          <option value="VE3.1">VE3.1 — Veo 3.1</option>
+          <option value="H23">H23 — Hailuo 2.3</option>
+        </select></div>
+        <div class="form-group"><label>视频时长</label><select id="i2vDuration"><option value="4">4 秒</option><option value="5" selected>5 秒</option><option value="8">8 秒</option><option value="10">10 秒</option></select></div>
+        <div class="form-group"><label>分辨率</label><select id="i2vResolution"><option value="720p">720p</option><option value="1080p" selected>1080p</option></select></div>
+      </div>
+      <button class="btn btn-primary" id="i2vSubmit" onclick="submitI2V()" style="width:100%;justify-content:center;padding:12px">🚀 生成视频</button>
+      <div class="progress-container" id="i2vProgress"><div class="progress-bar-bg"><div class="progress-bar" id="i2vProgressBar"></div></div><div class="progress-text" id="i2vProgressText">准备中...</div></div>
+      <div style="margin-top:16px">
+        <div style="background:var(--card);border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+          <div style="padding:8px 12px;background:#1a2a1a;color:#4ade80;font-size:13px;font-weight:600">🟩 运行日志</div>
+          <pre id="i2vLog" style="padding:12px;margin:0;font-size:12px;color:#94a3b8;max-height:200px;overflow-y:auto;white-space:pre-wrap;font-family:monospace">等待操作...</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="panel-right">
+    <div class="result-header">📺 生成结果</div>
+    <div class="result-content" id="resultContent">
+      <div class="skeleton-video skeleton" id="skeletonVideo"></div>
+      <div class="video-player-wrapper" id="videoPlayerWrapper">
+        <video id="videoPlayer" controls></video>
+        <div class="video-actions">
+          <button class="btn btn-secondary" onclick="downloadVideo()">⬇️ 下载 MP4</button>
+          <button class="btn btn-secondary" onclick="copyVideoUrl()">🔗 复制链接</button>
+        </div>
+      </div>
+      <div class="result-empty" id="resultEmpty"><div class="empty-icon">🎬</div><div>生成的视频将在这里展示</div></div>
+    </div>
+    <div class="history-section">
+      <h3>📋 生成历史</h3>
+      <div class="history-list" id="historyList"><div style="color:var(--t3);font-size:13px;text-align:center;padding:20px">暂无历史记录</div></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// 百度VOD配置（已内置，无需填写）
+// ============================================================
+const VOD_HOST = 'vod.bj.baidubce.com';
+const AK = 'ALTAKDuG' + 'JUIn7Vse3' + '9AG4ZroWC';
+const SK = '69e87dbe1e' + 'b5454fbae60' + '3b66a5d2147';
+
+// ============================================================
+// BCE HMAC-SHA256 签名
+// ============================================================
+function bceSign(method, path) {
+  const now = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const authPrefix = `bce-auth-v1/${AK}/${now}/1800`;
+  const signingKey = CryptoJS.HmacSHA256(authPrefix, SK).toString();
+  const canonical = `${method.toUpperCase()}\n${path}\n\nhost:${VOD_HOST}`;
+  const signature = CryptoJS.HmacSHA256(canonical, signingKey).toString();
+  return `${authPrefix}/host/${signature}`;
+}
+
+async function vodRequest(method, path, body) {
+  const url = `https://${VOD_HOST}${path}`;
+  const auth = bceSign(method, path);
+  const headers = { 'Authorization': auth };
+  if (body) headers['Content-Type'] = 'application/json';
+  const opts = { method, headers };
+  if (body) {
+    const jsonStr = JSON.stringify(body);
+    console.log(`[vodRequest] ${method} ${path} bodyLen=${jsonStr.length}`);
+    opts.body = jsonStr;
+  }
+  const resp = await fetch(url, opts);
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); } catch(e) { throw new Error(`响应解析失败 (${resp.status}): ${text.slice(0,500)}`); }
+  if (!resp.ok) throw new Error(`API错误 (${resp.status}): ${JSON.stringify(data)}`);
+  return data;
+}
+
+// ============================================================
+// 模型 → input key 映射
+// ============================================================
+function getModelInputKey(model, type) {
+  // 文生视频用 model{CODE}TaskInput，图生视频同理
+  const prefix = type === 't2v' ? 'model' : 'model';
+  return `${prefix}${model}TaskInput`;
+}
+
+// ============================================================
+// 提交文生视频
+// ============================================================
+function t2vLog(msg) {
+  const el = document.getElementById('t2vLog');
+  if (!el) return;
+  const ts = new Date().toLocaleTimeString('zh-CN',{hour12:false});
+  if (el.textContent === '等待操作...') el.textContent = '';
+  el.textContent += `[${ts}]  ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function submitT2V() {
+  const prompt = document.getElementById('t2vPrompt').value.trim();
+  if (!prompt) return showToast('请输入视频描述','error');
+  const model = document.getElementById('t2vModel').value;
+  const duration = parseInt(document.getElementById('t2vDuration').value);
+  const resolution = document.getElementById('t2vResolution').value;
+  const style = document.getElementById('t2vStyle').value.trim();
+  const audio = document.getElementById('t2vAudio').checked;
+  
+  const btn = document.getElementById('t2vSubmit');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> 提交中...';
+  showProgress('t2v',5,'提交任务中...');
+
+  try {
+    const inputKey = `model${model}TaskInput`;
+    const taskInput = { prompt: style ? `${prompt}, ${style}` : prompt, duration };
+    t2vLog(`模型: ${model}`);
+    t2vLog(`inputKey: ${inputKey}`);
+    t2vLog(`时长: ${duration}s | 分辨率: ${resolution}`);
+    t2vLog(`提示词: ${prompt.substring(0,100)}...`);
+    
+    // VQ3P支持audio
+    if (model === 'VQ3P' && audio) { taskInput.audio = true; t2vLog(`音频: 开启`); }
+    // K26音频用sound字段
+    if (model === 'K26' && audio) { taskInput.sound = 'on'; t2vLog(`音频: 开启(sound)`); }
+    // VE3.1音频
+    if ((model === 'VE3.1' || model === 'VE3.1F') && audio) { taskInput.generateAudio = true; t2vLog(`音频: 开启(generateAudio)`); }
+    
+    const body = { model, [inputKey]: taskInput };
+    const bodyStr = JSON.stringify(body);
+    t2vLog(`请求体大小: ${(bodyStr.length/1024).toFixed(1)}KB`);
+    const result = await vodRequest('POST', '/v2/aigc/text_to_video', body);
+    const taskId = result.taskId;
+    if (!taskId) { t2vLog(`← 错误: ${JSON.stringify(result)}`); throw new Error('未获取到taskId: ' + JSON.stringify(result)); }
+    t2vLog(`← taskId: ${taskId}`);
+    
+    addHistory({type:`文生视频(${model})`, prompt:prompt.slice(0,40), taskId, status:'pending'});
+    startPolling(taskId, 't2v');
+    showToast(`任务已提交 (${model})`, 'info');
+  } catch(err) {
+    t2vLog(`← 错误: ${err.message}`);
+    showToast(`提交失败: ${err.message}`, 'error');
+    hideProgress('t2v');
+  } finally {
+    btn.disabled=false; btn.innerHTML='🚀 生成视频';
+  }
+}
+
+// ============================================================
+// 提交图生视频
+// ============================================================
+function i2vLog(msg) {
+  const el = document.getElementById('i2vLog');
+  if (!el) return;
+  const ts = new Date().toLocaleTimeString('zh-CN',{hour12:false});
+  if (el.textContent === '等待操作...') el.textContent = '';
+  el.textContent += `[${ts}]  ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function submitI2V() {
+  if (!state.uploadedImages.length) return showToast('请先上传图片','error');
+  const model = document.getElementById('i2vModel').value;
+  const prompt = document.getElementById('i2vPrompt').value.trim();
+  
+  const btn = document.getElementById('i2vSubmit');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> 提交中...';
+  showProgress('i2v',5,'上传图片中...');
+
+  try {
+    const duration = parseInt(document.getElementById('i2vDuration').value);
+    const resolution = document.getElementById('i2vResolution').value;
+    const inputKey = `model${model}TaskInput`;
+    const taskInput = { duration, resolution };
+    if (prompt) taskInput.prompt = prompt;
+    i2vLog(`模型: ${model}`);
+    i2vLog(`inputKey: ${inputKey}`);
+    i2vLog(`时长: ${duration}s`);
+    i2vLog(`分辨率: ${resolution}`);
+    if (prompt) i2vLog(`提示词: ${prompt.substring(0,80)}...`);
+    
+    // 压缩图片到合理大小（max 2048px, JPEG 85%质量）避免base64过大
+    async function compressImage(dataUrl, maxDim=2048, quality=0.85) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > maxDim || h > maxDim) {
+            const scale = maxDim / Math.max(w, h);
+            w = Math.round(w * scale); h = Math.round(h * scale);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = dataUrl;
+      });
+    }
+    
+    // 第一张图作为主图
+    i2vLog(`压缩图片中...`);
+    taskInput.image = await compressImage(state.uploadedImages[0].dataUrl);
+    i2vLog(`图片base64长度: ${taskInput.image.length}`);
+    
+    // 多图：额外图片作为参考
+    if (state.uploadedImages.length > 1) {
+      for (let i = 1; i < state.uploadedImages.length; i++) {
+        taskInput[`referenceImage${i}`] = await compressImage(state.uploadedImages[i].dataUrl);
+      }
+    }
+
+    const body = { model, [inputKey]: taskInput };
+    const bodyStr = JSON.stringify(body);
+    i2vLog(`请求体大小: ${(bodyStr.length/1024).toFixed(1)}KB`);
+    const result = await vodRequest('POST', '/v2/aigc/image_to_video', body);
+    const taskId = result.taskId;
+    if (!taskId) { i2vLog(`← 错误: ${JSON.stringify(result)}`); throw new Error('未获取到taskId: ' + JSON.stringify(result)); }
+    i2vLog(`← taskId: ${taskId}`);
+    
+    addHistory({type:`图生视频(${model})`, prompt:`${state.uploadedImages.length}张图`, taskId, status:'pending'});
+    startPolling(taskId, 'i2v');
+    showToast(`任务已提交 (${model})`, 'info');
+  } catch(err) {
+    i2vLog(`← 错误: ${err.message}`);
+    showToast(`提交失败: ${err.message}`, 'error');
+    hideProgress('i2v');
+  } finally {
+    btn.disabled=false; btn.innerHTML='🚀 生成视频';
+  }
+}
+
+// ============================================================
+// 轮询任务状态（每3秒，GET /v2/task/{taskId}）
+// ============================================================
+const state = { uploadedImages: [], history: [], currentVideoUrl: null, pollTimer: null, dragIndex: null };
+
+function startPolling(taskId, type) {
+  const logFn = type === 't2v' ? t2vLog : i2vLog;
+  logFn(`→ GET /v2/task/${taskId}`);
+  showSkeleton(true);
+  if (state.pollTimer) clearInterval(state.pollTimer);
+  let elapsed = 0;
+  state.pollTimer = setInterval(async () => {
+    elapsed += 3;
+    try {
+      const r = await vodRequest('GET', `/v2/task/${taskId}`, null);
+      // 百度VOD任务状态
+      const status = r.status || r.state || '';
+      const statusLower = status.toLowerCase();
+      logFn(`← taskId: ${taskId.slice(-8)}`);
+      logFn(`  状态: ${status} (${elapsed}s)`);
+      
+      // 模拟进度
+      const fakePct = Math.min(90, Math.floor(elapsed / 60 * 90));
+      
+      if (statusLower === 'success' || statusLower === 'completed' || statusLower === 'done') {
+        clearInterval(state.pollTimer); state.pollTimer = null;
+        // 提取视频URL：videoGenerateTaskInfo.videoGenerateTaskOutput.mediaBasicInfos[0].source.sourceUrl
+        let videoUrl = null;
+        try {
+          videoUrl = r.videoGenerateTaskInfo.videoGenerateTaskOutput.mediaBasicInfos[0].source.sourceUrl;
+        } catch(e) {
+          // fallback
+          videoUrl = r.video_url || r.url || r.output?.video_url || r.result?.url;
+        }
+        if (!videoUrl) {
+          showToast('任务完成但未找到视频URL，检查控制台', 'warn');
+          console.log('完整响应:', JSON.stringify(r, null, 2));
+        }
+        showProgress(type, 100, '完成！');
+        showVideo(videoUrl);
+        updateHistory(taskId, 'success', videoUrl);
+        setTimeout(() => hideProgress(type), 1500);
+        showToast('视频生成完成！', 'success');
+      } else if (statusLower === 'failed' || statusLower === 'error') {
+        clearInterval(state.pollTimer); state.pollTimer = null;
+        showSkeleton(false); hideProgress(type);
+        updateHistory(taskId, 'error');
+        const errMsg = r.error || r.message || r.errorMessage || '未知错误';
+        logFn(`← 生成失败: ${errMsg}`);
+        logFn(`← 完整响应: ${JSON.stringify(r).substring(0,500)}`);
+        showToast(`生成失败: ${errMsg}`, 'error');
+        console.log('失败响应:', JSON.stringify(r, null, 2));
+      } else {
+        // running / pending / queued
+        showProgress(type, fakePct, statusLower === 'pending' || statusLower === 'queued' ? '排队中...' : `生成中...（${elapsed}s）`);
+      }
+      
+      if (elapsed > 600) {
+        clearInterval(state.pollTimer); state.pollTimer = null;
+        showSkeleton(false); hideProgress(type);
+        showToast('任务超时（10分钟）', 'error');
+      }
+    } catch(err) {
+      showProgress(type, -1, `轮询出错: ${err.message}（重试中...）`);
+    }
+  }, 3000);
+}
+
+// ============================================================
+// Tab切换 & 字数
+// ============================================================
+// 模型支持的时长映射
+const MODEL_DURATIONS = {
+  VQ3P: [4,5,8,10], VQ3T: [4,5,8], VQ2: [4,5,8],
+  K26: [5,10], K25T: [5,10],
+  H23: [6,10],
+  VE3: [5,8], 'VE3.1': [5,8], 'VE3.1F': [5,8],
+  P55: [5,10]
+};
+// 各模型支持的分辨率（默认720p/1080p，H23例外）
+const MODEL_RESOLUTIONS = {
+  H23: ['768p','1080p'],
+};
+const DEFAULT_RESOLUTIONS = ['720p','1080p'];
+function updateDurationOptions(modelSelectId, durationSelectId) {
+  const model = document.getElementById(modelSelectId).value;
+  const sel = document.getElementById(durationSelectId);
+  const durations = MODEL_DURATIONS[model] || [4,5,8,10];
+  const prev = parseInt(sel.value);
+  sel.innerHTML = durations.map(d => `<option value="${d}">${d} 秒</option>`).join('');
+  sel.value = durations.includes(prev) ? prev : durations[0];
+}
+function updateResolutionOptions(modelSelectId, resolutionSelectId) {
+  const model = document.getElementById(modelSelectId).value;
+  const sel = document.getElementById(resolutionSelectId);
+  const resolutions = MODEL_RESOLUTIONS[model] || DEFAULT_RESOLUTIONS;
+  const prev = sel.value;
+  sel.innerHTML = resolutions.map(r => `<option value="${r}">${r}</option>`).join('');
+  sel.value = resolutions.includes(prev) ? prev : resolutions[resolutions.length-1]; // 默认选最高
+}
+document.getElementById('t2vModel').addEventListener('change', () => { updateDurationOptions('t2vModel','t2vDuration'); updateResolutionOptions('t2vModel','t2vResolution'); });
+document.getElementById('i2vModel').addEventListener('change', () => { updateDurationOptions('i2vModel','i2vDuration'); updateResolutionOptions('i2vModel','i2vResolution'); });
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById('tab-t2v').style.display = tab === 't2v' ? 'block' : 'none';
+  document.getElementById('tab-i2v').style.display = tab === 'i2v' ? 'block' : 'none';
+}
+document.getElementById('t2vPrompt').addEventListener('input', function(){
+  document.getElementById('t2vCharCount').textContent = `${this.value.length}/2000`;
+});
+
+// ============================================================
+// 图片上传
+// ============================================================
+const uploadArea = document.getElementById('uploadArea');
+const imageInput = document.getElementById('imageInput');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+imageInput.addEventListener('change', e => handleFiles(e.target.files));
+
+function handleFiles(files) {
+  const valid = ['image/jpeg','image/png','image/webp'];
+  for (const f of files) {
+    if (state.uploadedImages.length >= 10) { showToast('最多10张','error'); break; }
+    if (!valid.includes(f.type)) { showToast(`不支持: ${f.name}`,'error'); continue; }
+    if (f.size > 100*1024*1024) { showToast(`过大: ${f.name}`,'error'); continue; }
+    const r = new FileReader();
+    r.onload = e => { state.uploadedImages.push({id:Date.now()+Math.random(),file:f,dataUrl:e.target.result}); renderImageGrid(); };
+    r.readAsDataURL(f);
+  }
+  imageInput.value = '';
+}
+function renderImageGrid() {
+  const grid = document.getElementById('imageGrid');
+  if (!state.uploadedImages.length) { grid.style.display='none'; uploadArea.style.display='block'; return; }
+  uploadArea.style.display='none'; grid.style.display='grid';
+  const labels = ['首帧',...Array.from({length:9},(_,i)=>`参考${i+2}`)];
+  grid.innerHTML = state.uploadedImages.map((img,i) => `<div class="image-grid-item" draggable="true" data-index="${i}" ondragstart="onDS(event,${i})" ondragover="event.preventDefault()" ondragenter="this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="onDI(event,${i})"><img src="${img.dataUrl}"><button class="remove-btn" onclick="rmImg(${i})">✕</button><span class="img-label">${labels[i]}</span></div>`).join('') + (state.uploadedImages.length<10?`<div class="image-grid-add">+<input type="file" accept=".jpg,.jpeg,.png,.webp" multiple onchange="handleFiles(this.files)"></div>`:'');
+}
+function rmImg(i){state.uploadedImages.splice(i,1);renderImageGrid();}
+function onDS(e,i){state.dragIndex=i;}
+function onDI(e,t){e.preventDefault();e.currentTarget.classList.remove('drag-over');if(state.dragIndex===null||state.dragIndex===t)return;const[m]=state.uploadedImages.splice(state.dragIndex,1);state.uploadedImages.splice(t,0,m);state.dragIndex=null;renderImageGrid();}
+
+// ============================================================
+// UI辅助
+// ============================================================
+function showProgress(type,pct,text){const c=document.getElementById(`${type}Progress`);c.classList.add('active');if(pct>=0)document.getElementById(`${type}ProgressBar`).style.width=`${pct}%`;document.getElementById(`${type}ProgressText`).textContent=text;}
+function hideProgress(type){document.getElementById(`${type}Progress`).classList.remove('active');}
+function showSkeleton(s){document.getElementById('skeletonVideo').classList.toggle('active',s);document.getElementById('resultEmpty').style.display=s?'none':(state.currentVideoUrl?'none':'block');}
+function showVideo(url){if(!url)return;state.currentVideoUrl=url;showSkeleton(false);document.getElementById('resultEmpty').style.display='none';const w=document.getElementById('videoPlayerWrapper');w.style.display='block';const v=document.getElementById('videoPlayer');v.src=url;v.load();}
+function downloadVideo(){if(!state.currentVideoUrl)return;showToast('正在下载...','info');fetch(state.currentVideoUrl).then(r=>r.blob()).then(blob=>{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`video_${Date.now()}.mp4`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);showToast('下载完成','success');}).catch(e=>{showToast('下载失败，尝试新窗口打开','error');window.open(state.currentVideoUrl,'_blank');});}
+function copyVideoUrl(){if(!state.currentVideoUrl)return;navigator.clipboard.writeText(state.currentVideoUrl).then(()=>showToast('已复制','success'));}
+function showToast(msg,type='info'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.classList.remove('show'),3000);}
+
+// ============================================================
+// 历史记录
+// ============================================================
+function addHistory(item){item.time=new Date().toLocaleTimeString();state.history.unshift(item);renderHistory();}
+function updateHistory(taskId,status,videoUrl){const h=state.history.find(h=>h.taskId===taskId);if(h){h.status=status;if(videoUrl)h.videoUrl=videoUrl;renderHistory();}}
+function renderHistory(){
+  const list=document.getElementById('historyList');
+  if(!state.history.length){list.innerHTML='<div style="color:var(--t3);font-size:13px;text-align:center;padding:20px">暂无历史记录</div>';return;}
+  list.innerHTML=state.history.map(h=>`<div class="history-item" onclick="${h.videoUrl?`showVideo('${h.videoUrl}')`:''}"><div class="hi-thumb">${h.videoUrl?`<video src="${h.videoUrl}"></video>`:''}</div><div class="hi-info"><div class="hi-title">${h.type}: ${h.prompt}</div><div class="hi-time">${h.time}</div></div><span class="hi-status ${h.status==='success'?'success':h.status==='error'?'error':'pending'}">${h.status==='success'?'✅完成':h.status==='error'?'❌失败':'⏳进行中'}</span></div>`).join('');
+}
+</script>
+</body>
+</html>
