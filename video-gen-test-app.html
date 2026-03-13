@@ -356,13 +356,17 @@ async function submitI2V() {
     
     // 第一张图作为主图
     i2vLog(`压缩图片中...`);
-    taskInput.image = await compressImage(state.uploadedImages[0].dataUrl);
-    i2vLog(`图片base64长度: ${taskInput.image.length}`);
+    const rawImg = await compressImage(state.uploadedImages[0].dataUrl);
+    // K26/Kling 只接受纯base64（不含data:前缀），其他模型接受完整dataUrl
+    const needsPureBase64 = ['K26','K25T','K25','K21'].includes(model);
+    taskInput.image = needsPureBase64 ? rawImg.split(',')[1] : rawImg;
+    i2vLog(`图片base64长度: ${taskInput.image.length}${needsPureBase64 ? ' (纯base64)' : ''}`);
     
     // 多图：额外图片作为参考
     if (state.uploadedImages.length > 1) {
       for (let i = 1; i < state.uploadedImages.length; i++) {
-        taskInput[`referenceImage${i}`] = await compressImage(state.uploadedImages[i].dataUrl);
+        const refImg = await compressImage(state.uploadedImages[i].dataUrl);
+        taskInput[`referenceImage${i}`] = needsPureBase64 ? refImg.split(',')[1] : refImg;
       }
     }
 
